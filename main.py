@@ -76,23 +76,31 @@ class Projects:
       raise ValueError(f'No project exists for key {repr(i)}')
 
 class Project:
-  def __init__(self, channel_id, name, files = None):
-    self.channel_id = channel_id
+  def __init__(self, name, channel_id, files):
     self.name = name
-    self.files = files or []
+    self.channel_id = channel_id
+    self.files = files
 
   @staticmethod
   def load(project_data):
     return Project(
-      channel_id = project_data['channel_id'],
       name = project_data['name'],
+      channel_id = project_data['channel_id'],
       files = [File.load(f) for f in project_data['files']],
+    )
+
+  @staticmethod
+  def new(name, channel):
+    return Project(
+      name = name,
+      channel_id = ctx.channel.id,
+      files = []
     )
 
   def dump(self):
     return {
-      'channel_id': self.channel_id,
       'name': self.name,
+      'channel_id': self.channel_id,
       'files': [f.dump() for f in self.files],
     }
 
@@ -147,7 +155,7 @@ with command_group(bot, 'project') as projectgroup:
   @projectgroup.slash_command('new')
   async def project_new(ctx, name: str):
     print(f'Attempting to create a project named `{name}` in channel id {ctx.channel.id} ({ctx.channel.name})')
-    new_project = Project(ctx.channel.id, name)
+    new_project = Project.new(name, ctx.channel)
     if new_project not in projects:
       projects.add(new_project)
       projects.save()
