@@ -86,7 +86,7 @@ class Project:
     return Project(
       channel_id = project_data['channel_id'],
       name = project_data['name'],
-      files = [File.load(f) for f in projects_data['files']],
+      files = [File.load(f) for f in project_data['files']],
     )
 
   def dump(self):
@@ -108,7 +108,7 @@ class File:
   def load(file_data):
     return File(
       name = file_data['name'],
-      realname = file_data['realname'],
+      real_name = file_data['real_name'],
     )
 
   @staticmethod
@@ -160,7 +160,12 @@ with command_group(bot, 'project') as projectgroup:
 
   @projectgroup.slash_command('files')
   async def project_files(ctx):
-    await ctx.respond('You executed the slash command show_files!')
+    if ctx.channel.id in projects:
+      project = projects[ctx.channel.id]
+      files = '\n'.join('`' + file.name + '`, (`' + file.real_name + '` internally)' for file in project.files)
+      await ctx.respond(f'Project `{project.name}` has {len(project.files)} files:\n{files}')
+    else:
+      await ctx.respond('There is no project in this channel.')
 
 with command_group(bot, 'file') as filegroup:
   @filegroup.slash_command('new')
