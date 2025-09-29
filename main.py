@@ -180,13 +180,17 @@ with command_group(bot, 'file') as filegroup:
   async def file_new(ctx):
     await ctx.respond('You executed the slash command add_file!')
 
-  @filegroup.slash_command('delete')
-  async def file_delete(ctx):
-    await ctx.respond('You executed the slash command delete_file!')
+  @filegroup.slash_command('focus')
+  async def file_focus(ctx):
+    await ctx.respond('You executed the slash command focus_file!')
 
   @filegroup.slash_command('view')
   async def file_view(ctx):
     await ctx.respond('You executed the slash command view_file!')
+
+  @filegroup.slash_command('delete')
+  async def file_delete(ctx):
+    await ctx.respond('You executed the slash command delete_file!')
 
 with command_group(bot, 'statement') as statementgroup:
   @statementgroup.slash_command('new')
