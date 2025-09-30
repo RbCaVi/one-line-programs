@@ -64,16 +64,22 @@ class Projects:
     self.projects.append(project)
     self.projects_by_channel_id[project.channel_id] = project
     self.projects_by_name[project.name] = project
-    project.files.append(File.new('main'))
 
-  def __getitem__(self, i):
+  def get(self, i):
     # get a project by either name or channel id
     if i in self.projects_by_channel_id:
       return self.projects_by_channel_id[i]
     elif i in self.projects_by_name:
       return self.projects_by_name[i]
     else:
+      return None
+
+  def __getitem__(self, i):
+    # get a project by either name or channel id
+    project = self.get(i)
+    if project is None:
       raise ValueError(f'No project exists for key {repr(i)}')
+    return project
 
 class Project:
   def __init__(self, name, channel_id, files):
@@ -94,7 +100,7 @@ class Project:
     return Project(
       name = name,
       channel_id = ctx.channel.id,
-      files = []
+      files = [File.new('main')]
     )
 
   def dump(self):
