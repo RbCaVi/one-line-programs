@@ -173,28 +173,39 @@ with command_group(bot, 'project') as projectgroup:
 
   @projectgroup.slash_command('files')
   async def project_files(ctx):
-    if ctx.channel.id in projects:
-      project = projects[ctx.channel.id]
-      files = '\n'.join('`' + file.name + '`, (`' + file.real_name + '` internally)' for file in project.files)
-      await ctx.respond(f'Project `{project.name}` has {len(project.files)} files:\n{files}')
-    else:
+    if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
+      return
+    files = '\n'.join('`' + file.name + '`, (`' + file.real_name + '` internally)' for file in project.files)
+    await ctx.respond(f'Project `{project.name}` has {len(project.files)} files:\n{files}')
 
 with command_group(bot, 'file') as filegroup:
   @filegroup.slash_command('new')
   async def file_new(ctx):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
     await ctx.respond('You executed the slash command add_file!')
 
   @filegroup.slash_command('focus')
   async def file_focus(ctx):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
     await ctx.respond('You executed the slash command focus_file!')
 
   @filegroup.slash_command('view')
   async def file_view(ctx):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
     await ctx.respond('You executed the slash command view_file!')
 
   @filegroup.slash_command('delete')
   async def file_delete(ctx):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
     await ctx.respond('You executed the slash command delete_file!')
 
 with command_group(bot, 'statement') as statementgroup:
