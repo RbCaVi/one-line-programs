@@ -181,10 +181,11 @@ with command_group(bot, 'project') as projectgroup:
 
 with command_group(bot, 'file') as filegroup:
   @filegroup.slash_command('new')
-  async def file_new(ctx):
+  async def file_new(ctx, name: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
+    project.files.append(File.new(name))
     await ctx.respond('You executed the slash command add_file!')
 
   @filegroup.slash_command('focus')
