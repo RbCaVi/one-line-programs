@@ -111,7 +111,19 @@ class Project:
     }
 
 def get_real_name(name):
-  return os.path.basename(name) + '_' + ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+  return name.replace('/', '_') + '_' + ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+
+def is_name_valid(name):
+  return not any(
+    name.startswith('/'),
+    name.startswith('./'),
+    name.startswith('../'),
+    name.endswith('/'),
+    name.endswith('/.'),
+    name.endswith('/..'),
+    '/./' in name,
+    '/../' in name,
+  )
 
 class File:
   def __init__(self, name, real_name):
@@ -187,6 +199,9 @@ with command_group(bot, 'file') as filegroup:
   async def file_new(ctx, name: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
+      return
+    if not is_name_valid(name):
+      await ctx.respond('`{name}` is not a valid filename.')
       return
     project.files.append(File.new(name))
     await ctx.respond('You executed the slash command add_file!')
