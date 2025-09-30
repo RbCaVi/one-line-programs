@@ -110,6 +110,9 @@ class Project:
       'files': [f.dump() for f in self.files],
     }
 
+def get_real_name(name):
+  return os.path.basename(name) + '_' + ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+
 class File:
   def __init__(self, name, real_name):
     self.name = name
@@ -130,7 +133,7 @@ class File:
     # create an empty file
     # how do i generate a realname
     # idk just take name and put a "token" after it
-    while os.path.exists(os.path.join(files_path, real_name := name + '_' + ''.join(random.choice(string.ascii_lowercase) for i in range(8)))): # this is the best way to write this
+    while os.path.exists(os.path.join(files_path, real_name := get_real_name(name))): # this is the best way to write this
       pass
     with open(os.path.join(files_path, real_name), 'w') as f:
       json.dump([], f, indent = 2)
