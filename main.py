@@ -154,17 +154,16 @@ async def first_slash(ctx):
 with command_group(bot, 'project') as projectgroup:
   @projectgroup.slash_command('new')
   async def project_new(ctx, name: str):
-    print(f'Attempting to create a project named `{name}` in channel id {ctx.channel.id} ({ctx.channel.name})')
+    if (existing_project := projects.get(ctx.channel.id)) is not None:
+      await ctx.respond(f'A project has already been created in this channel: `{existing_project.name}`')
+      return
+    if (existing_project := projects.get(name)) is not None:
+      await ctx.respond(f'A project has already been created with this name in <#{existing_project.channel_id}>')
+      return
     new_project = Project.new(name, ctx.channel)
-    if new_project not in projects:
-      projects.add(new_project)
-      projects.save()
-      await ctx.respond(f'Project `{new_project.name}` created.')
-    else:
-      if new_project.channel_id in projects:
-        await ctx.respond(f'A project has already been created in this channel: `{projects[new_project.channel_id].name}`')
-      elif new_project.name in projects:
-        await ctx.respond(f'A project has already been created with this name in <#{projects[new_project.name].channel_id}>')
+    projects.add(new_project)
+    projects.save()
+    await ctx.respond(f'Project `{new_project.name}` created.')
 
   @projectgroup.slash_command('files')
   async def project_files(ctx):
