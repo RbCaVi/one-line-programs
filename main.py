@@ -6,11 +6,9 @@ import os
 import random
 import string
 
-# https://stackoverflow.com/a/71169236
+import config
 
-guild_ids = [1203529312016400435] # just crest for now
-projects_info_path = 'projects.json'
-files_path = 'files/'
+# https://stackoverflow.com/a/71169236
 
 @contextlib.contextmanager
 def command_group(bot, name, **kwargs):
@@ -18,7 +16,7 @@ def command_group(bot, name, **kwargs):
   yield CommandGroup(group)
 
 def slash_command(bot, name, **kwargs):
-  return bot.slash_command(name = name, guild_ids = guild_ids, **kwargs)
+  return bot.slash_command(name = name, guild_ids = config.guild_ids, **kwargs)
 
 class CommandGroup:
   def __init__(self, group):
@@ -30,24 +28,27 @@ class CommandGroup:
     yield CommandGroup(group)
 
   def slash_command(self, name, **kwargs):
-    return self.group.command(name = name, guild_ids = guild_ids, **kwargs)
+    return self.group.command(name = name, guild_ids = config.guild_ids, **kwargs)
+
+def json_load(file_name):
+  with open(file_name) as f:
+    return json.load(f)
+
+def json_dump(data, file_name):
+  with open(file_name, 'w') as f:
+    json.dump(data, f, indent = 2)
 
 class Projects:
   def __init__(self):
     self.projects = []
-    try:
-      with open(projects_info_path) as f:
-        projects_data = json.load(f)
-      self.projects = [Project.load(p) for p in projects_data]
-    except Exception as e:
-      print(f'Could not load projects from {projects_info_path}.')
-      print(f'Error: {e}')
+    for project_id in os.listdir(config.projects_data):
+      try:
+        self.projects.append(Project.load(project_id))
+      except Exception as e:
+        print(f'Could not load project at {project_id}.')
+        print(f'Error: {repr(e)}')
     self.projects_by_channel_id = {p.channel_id: p for p in self.projects}
     self.projects_by_name = {p.name: p for p in self.projects}
-
-  def save(self):
-    with open(projects_info_path, 'w') as f:
-      json.dump([p.dump() for p in self.projects], f, indent = 2)
 
   def __contains__(self, project):
     if isinstance(project, int):
@@ -82,87 +83,107 @@ class Projects:
     return project
 
 class Project:
-  def __init__(self, name, channel_id, files):
+  def __init__(self, project_id, name, channel_id):
+    self.id = project_id
     self.name = name
     self.channel_id = channel_id
-    self.files = files
+    self.files = []
+    for file_id in os.listdir(os.path.join(config.projects_data, self.id, config.project_files)):
+      try:
+        self.files.append(File.load(self.id, file_id))
+      except Exception as e:
+        print(f'Could not load file at {project_name} :: {file_id}.')
+        print(f'Error: {repr(e)}')
+    self.files_by_name = {f.name: f for f in self.files}
 
   @staticmethod
-  def load(project_data):
+  def load(project_id):
+    project_data = json_load(os.path.join(config.projects_data, project_id, config.project_info))
     return Project(
+      project_id = project_id,
       name = project_data['name'],
       channel_id = project_data['channel_id'],
-      files = [File.load(f) for f in project_data['files']],
     )
 
   @staticmethod
   def new(name, channel):
-    return Project(
+    project_id = f'{name}_{channel.id}_{random_string()}'
+    os.makedirs(os.path.join(config.projects_data, project_id, config.project_files))
+    project = Project(
+      project_id = project_id,
       name = name,
-      channel_id = ctx.channel.id,
-      files = [File.new('main')]
+      channel_id = channel.id,
     )
+    project.files.append(File.new(project.id, 'main'))
+    project.save()
+    return project
 
-  def dump(self):
-    return {
+  def save(self):
+    json_dump({
       'name': self.name,
       'channel_id': self.channel_id,
-      'files': [f.dump() for f in self.files],
-    }
+    }, os.path.join(config.projects_data, self.id, config.project_info))
 
-def get_real_name(name):
-  return name.replace('/', '_') + '_' + ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+  def add_file(self, name):
+    self.files.append(File.new(self.id, name))
+
+def random_string():
+  return ''.join(random.choice(string.ascii_lowercase) for i in range(8))
+
+def get_file_id(name):
+  # how do i generate an id
+  # idk just take name and put a "token" after it
+  return name.replace('/', '_') + '_' + random_string()
 
 def is_name_valid(name):
-  return not any(
+  return not any((
     name.startswith('/'),
     name.startswith('./'),
     name.startswith('../'),
     name.endswith('/'),
     name.endswith('/.'),
     name.endswith('/..'),
+    '//' in name,
     '/./' in name,
     '/../' in name,
-  )
+  ))
 
 class File:
-  def __init__(self, name, real_name):
+  def __init__(self, project_id, file_id, name, lines):
+    self.project_id = project_id
+    self.id = file_id
     self.name = name
-    self.real_name = real_name
-    with open(os.path.join(files_path, self.real_name)) as f:
-      lines_data = json.load(f)
-    self.lines = [Line.load(l) for l in lines_data]
+    self.lines = [Line.load(l) for l in lines]
 
   @staticmethod
-  def load(file_data):
+  def load(project_id, file_id):
+    file_data = json_load(os.path.join(config.projects_data, project_id, config.project_files, file_id))
     return File(
+      project_id = project_id,
+      file_id = file_id,
       name = file_data['name'],
-      real_name = file_data['real_name'],
+      lines = file_data['lines'],
     )
 
   @staticmethod
-  def new(name):
+  def new(project_id, name):
     # create an empty file
-    # how do i generate a realname
-    # idk just take name and put a "token" after it
-    while os.path.exists(os.path.join(files_path, real_name := get_real_name(name))): # this is the best way to write this
+    while os.path.exists(os.path.join(config.projects_data, project_id, config.project_files, file_id := get_file_id(name))): # this is the best way to write this
       pass
-    with open(os.path.join(files_path, real_name), 'w') as f:
-      json.dump([], f, indent = 2)
-    return File(
+    file = File(
+      project_id = project_id,
+      file_id = file_id,
       name = name,
-      real_name = real_name,
+      lines = [],
     )
-
-  def dump(self):
-    return {
-      'name': self.name,
-      'real_name': self.real_name,
-    }
+    file.save()
+    return file
 
   def save(self):
-    with open(os.path.join(files_path, self.real_name), 'w') as f:
-      json.dump([l.dump() for l in self.lines], f, indent = 2)
+    json_dump({
+      'name': self.name,
+      'lines': [l.dump() for l in self.lines],
+    }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
 
 bot = discord.ext.commands.Bot()
 
@@ -183,7 +204,6 @@ with command_group(bot, 'project') as projectgroup:
       return
     new_project = Project.new(name, ctx.channel)
     projects.add(new_project)
-    projects.save()
     await ctx.respond(f'Project `{new_project.name}` created.')
 
   @projectgroup.slash_command('files')
@@ -191,7 +211,7 @@ with command_group(bot, 'project') as projectgroup:
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
-    files = '\n'.join('`' + file.name + '`, (`' + file.real_name + '` internally)' for file in project.files)
+    files = '\n'.join('`' + file.name + '` (ID: `' + file.id + '`)' for file in project.files)
     await ctx.respond(f'Project `{project.name}` has {len(project.files)} files:\n{files}')
 
 with command_group(bot, 'file') as filegroup:
@@ -201,10 +221,10 @@ with command_group(bot, 'file') as filegroup:
       await ctx.respond('There is no project in this channel.')
       return
     if not is_name_valid(name):
-      await ctx.respond('`{name}` is not a valid filename.')
+      await ctx.respond(f'`{name}` is not a valid filename.')
       return
-    project.files.append(File.new(name))
-    await ctx.respond('You executed the slash command add_file!')
+    project.files.append(File.new(project.id, name))
+    await ctx.respond(f'`{name}` has been created.')
 
   @filegroup.slash_command('focus')
   async def file_focus(ctx):
