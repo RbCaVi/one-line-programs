@@ -226,12 +226,18 @@ with command_group(bot, 'file') as filegroup:
     project.files.append(File.new(project.id, name))
     await ctx.respond(f'`{name}` has been created.')
 
-  @filegroup.slash_command('focus')
-  async def file_focus(ctx):
+  def autocomplete_file(ctx):
+    ctx.interaction.channel.id
+    if (project := projects.get(ctx.interaction.channel.id)) is None:
+      return []
+    return [name for name in project.files_by_name if name.lower().startswith(ctx.value.lower())]
+
+  @filegroup.slash_command('focus', options = [discord.Option(name = 'name', autocomplete = autocomplete_file)])
+  async def file_focus(ctx, name: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
-    await ctx.respond('You executed the slash command focus_file!')
+    await ctx.respond(f'You executed the slash command focus_file {name}!')
 
   @filegroup.slash_command('view')
   async def file_view(ctx):
