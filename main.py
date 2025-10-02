@@ -82,6 +82,11 @@ class Projects:
       raise ValueError(f'No project exists for key {repr(i)}')
     return project
 
+  def get_poll(self, poll_id):
+    for name,project in self.projects_by_name.items():
+      if (poll := project.get_poll(poll_id)) is not None:
+        return name,poll
+
 class Project:
   def __init__(self, project_id, name, channel_id, focused_files):
     self.id = project_id
@@ -133,6 +138,11 @@ class Project:
 
   def focus(self, user_id, name):
     self.focused_files[user_id] = self.files_by_name[name]
+
+  def get_poll(self, poll_id):
+    for name,file in self.files_by_name.items():
+      if (poll := file.get_poll(poll_id)) is not None:
+        return name, poll
 
 def random_string():
   return ''.join(random.choice(string.ascii_lowercase) for i in range(8))
@@ -192,6 +202,11 @@ class File:
       'lines': [l.dump() for l in self.lines],
     }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
 
+  def get_poll(self, poll_id):
+    for i,line in enumerate(self.lines):
+      if (poll := line.get_poll(poll_id)) is not None:
+        return i, poll
+
 class Line:
   def __init__(self, content, contributors, polls):
     self.content = content
@@ -221,11 +236,15 @@ class Line:
       'polls': [[mid, *p] for mid,p in self.polls.items()]
     }
 
-  def add_edit_poll(self, message_id, user_id, new_content):
-    self.polls[message_id] = ['edit', user_id, new_content]
+  def add_edit_poll(self, poll_id, user_id, new_content):
+    self.polls[poll_id] = ['edit', user_id, new_content]
 
-  def add_delete_poll(self, message_id, user_id):
-    self.polls[message_id] = ['delete', user_id]
+  def add_delete_poll(self, poll_id, user_id):
+    self.polls[poll_id] = ['delete', user_id]
+
+  def get_poll(self, poll_id):
+    if (poll := self.polls.get(poll_id)) is not None:
+      return poll
 
 bot = discord.ext.commands.Bot()
 
@@ -384,7 +403,9 @@ async def on_raw_poll_vote_add(payload) -> None:
   poll = (await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)).poll
   print(poll.total_votes())
   for answer in poll.answers:
-    print(answer, await [x async for x in answer.voters()])
+    print(answer, [x async for x in answer.voters()])
+  project_name,(file_name,(line_num,poll_data)) = projects.get_poll(payload.message_id)
+  print(projects.get_poll(payload.message_id))
 
 with open('token') as f:
   token = f.read()
