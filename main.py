@@ -193,24 +193,28 @@ class File:
     }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
 
 class Line:
-  def __init__(self, content):
+  def __init__(self, content, contributors):
     self.content = content
+    self.contributors = set(contributors)
 
   @staticmethod
   def load(line_data):
     return Line(
       content = line_data['content'],
+      contributors = line_data['contributors'],
     )
 
   @staticmethod
-  def new(content):
+  def new(content, author_id):
     return Line(
       content = content,
+      contributors = [author_id],
     )
 
   def dump(self):
     return {
       'content': self.content,
+      'contributors': list(self.contributors),
     }
 
 bot = discord.ext.commands.Bot()
@@ -304,7 +308,7 @@ with command_group(bot, 'statement') as statementgroup:
       line_num = 0
     if line_num > len(file.lines):
       line_num = len(file.lines)
-    file.lines.insert(line_num, Line.new(content))
+    file.lines.insert(line_num, Line.new(content, ctx.author.id))
     file.save()
     await ctx.respond('Statement added.')
 
