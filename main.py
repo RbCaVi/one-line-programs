@@ -272,16 +272,35 @@ with command_group(bot, 'file') as filegroup:
     await ctx.respond('You executed the slash command delete_file!')
 
 with command_group(bot, 'statement') as statementgroup:
-  @statementgroup.slash_command('new')
-  async def statement_new(ctx):
+  @statementgroup.slash_command('add')
+  async def statement_add(ctx, line: int, content: str):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
+    if (file := project.focused_files.get(ctx.author.id)) is None:
+      await ctx.respond(f'You are not focused on a file.')
+      return
+    print(line, content)
     await ctx.respond('You executed the slash command add_statement!')
 
   @statementgroup.slash_command('edit')
   async def statement_edit(ctx):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
+    if (file := project.focused_files.get(ctx.author.id)) is None:
+      await ctx.respond(f'You are not focused on a file.')
+      return
     await ctx.respond('You executed the slash command edit_statement!')
 
   @statementgroup.slash_command('delete')
   async def statement_delete(ctx):
+    if (project := projects.get(ctx.channel.id)) is None:
+      await ctx.respond('There is no project in this channel.')
+      return
+    if (file := project.focused_files.get(ctx.author.id)) is None:
+      await ctx.respond(f'You are not focused on a file.')
+      return
     await ctx.respond('You executed the slash command delete_statement!')
 
 @bot.event
