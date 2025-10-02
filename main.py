@@ -83,7 +83,7 @@ class Projects:
     return project
 
 class Project:
-  def __init__(self, project_id, name, channel_id):
+  def __init__(self, project_id, name, channel_id, focused_files):
     self.id = project_id
     self.name = name
     self.channel_id = channel_id
@@ -95,6 +95,7 @@ class Project:
         print(f'Could not load file at {project_name} :: {file_id}.')
         print(f'Error: {repr(e)}')
     self.files_by_name = {f.name: f for f in self.files}
+    self.focused_files = {uid: self.files_by_name[name] for uid,name in focused_files}
 
   @staticmethod
   def load(project_id):
@@ -103,6 +104,7 @@ class Project:
       project_id = project_id,
       name = project_data['name'],
       channel_id = project_data['channel_id'],
+      focused_files = project_data['focused_files'],
     )
 
   @staticmethod
@@ -113,6 +115,7 @@ class Project:
       project_id = project_id,
       name = name,
       channel_id = channel.id,
+      focused_files = [],
     )
     project.files.append(File.new(project.id, 'main'))
     project.save()
@@ -122,10 +125,14 @@ class Project:
     json_dump({
       'name': self.name,
       'channel_id': self.channel_id,
+      'focused_files': [[uid, f.name] for uid,f in self.focused_files.items()]
     }, os.path.join(config.projects_data, self.id, config.project_info))
 
   def add_file(self, name):
     self.files.append(File.new(self.id, name))
+
+  def focus(self, user_id, name):
+    self.focused_files[user_id] = self.files_by_name[name]
 
 def random_string():
   return ''.join(random.choice(string.ascii_lowercase) for i in range(8))
@@ -237,7 +244,12 @@ with command_group(bot, 'file') as filegroup:
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
-    await ctx.respond(f'You executed the slash command focus_file {name}!')
+    if name not in project.files_by_name:
+      await ctx.respond(f'`{name}` does not exist in this project.')
+      return
+    project.focus(ctx.author.id, name)
+    project.save()
+    await ctx.respond(f'File `{name}` focused.')
 
   @filegroup.slash_command('view')
   async def file_view(ctx):
