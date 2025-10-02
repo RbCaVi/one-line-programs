@@ -192,6 +192,27 @@ class File:
       'lines': [l.dump() for l in self.lines],
     }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
 
+class Line:
+  def __init__(self, content):
+    self.content = content
+
+  @staticmethod
+  def load(line_data):
+    return Line(
+      content = line_data['content'],
+    )
+
+  @staticmethod
+  def new(content):
+    return Line(
+      content = content,
+    )
+
+  def dump(self):
+    return {
+      'content': self.content,
+    }
+
 bot = discord.ext.commands.Bot()
 
 projects = Projects()
@@ -279,7 +300,8 @@ with command_group(bot, 'statement') as statementgroup:
     if (file := project.focused_files.get(ctx.author.id)) is None:
       await ctx.respond(f'You are not focused on a file.')
       return
-    print(line, content)
+    file.lines.insert(line, Line.new(content))
+    file.save()
     await ctx.respond('You executed the slash command add_statement!')
 
   @statementgroup.slash_command('edit')
