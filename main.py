@@ -300,9 +300,13 @@ with command_group(bot, 'statement') as statementgroup:
     if (file := project.focused_files.get(ctx.author.id)) is None:
       await ctx.respond(f'You are not focused on a file.')
       return
+    if line < 0:
+      line = 0
+    if line > len(file.lines):
+      line = len(file.lines)
     file.lines.insert(line, Line.new(content))
     file.save()
-    await ctx.respond('You executed the slash command add_statement!')
+    await ctx.respond('Statement added.')
 
   @statementgroup.slash_command('edit')
   async def statement_edit(ctx):
