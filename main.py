@@ -254,10 +254,13 @@ with command_group(bot, 'file') as filegroup:
     project.save()
     await ctx.respond(f'File `{name}` focused.')
 
-  @filegroup.slash_command('view')
-  async def file_view(ctx):
+  @filegroup.slash_command('view', options = [file_option('name')])
+  async def file_view(ctx, name: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
+      return
+    if name not in project.files_by_name:
+      await ctx.respond(f'`{name}` does not exist in this project.')
       return
     await ctx.respond('You executed the slash command view_file!')
 
