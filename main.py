@@ -234,7 +234,6 @@ with command_group(bot, 'file') as filegroup:
     await ctx.respond(f'`{name}` has been created.')
 
   def autocomplete_file(ctx):
-    ctx.interaction.channel.id
     if (project := projects.get(ctx.interaction.channel.id)) is None:
       return []
     return [name for name in project.files_by_name if name.lower().startswith(ctx.value.lower())]
