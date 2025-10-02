@@ -309,14 +309,26 @@ with command_group(bot, 'statement') as statementgroup:
     await ctx.respond('Statement added.')
 
   @statementgroup.slash_command('edit')
-  async def statement_edit(ctx):
+  async def statement_edit(ctx, line: int, new_content: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
       await ctx.respond(f'You are not focused on a file.')
       return
-    await ctx.respond('You executed the slash command edit_statement!')
+    if line < 1 or line > len(file.lines):
+      await ctx.respond(f'Invalid line number.')
+      return
+    poll = discord.Poll(
+      question = discord.PollMedia(f'Edit line `{line}` of `{file.name}` (currently `{file.lines[line].content}`) to `{new_content}`?'),
+      answers = [
+        discord.PollAnswer("Yes", "❤"),
+        discord.PollAnswer("No", "❤"),
+      ],
+      duration = 1,
+      allow_multiselect = False,
+    )
+    await ctx.respond('You executed the slash command edit_statement!', poll = poll)
 
   @statementgroup.slash_command('delete')
   async def statement_delete(ctx):
@@ -334,6 +346,14 @@ async def on_ready() -> None:
   assert bot.user is not None
   print(f"Others may know me as {bot.user.display_name}.")
   print(f"ID: {bot.user.id}")
+
+@bot.event
+async def on_raw_poll_vote_add(payload) -> None:
+  print(payload)
+  poll = (await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)).poll
+  print(poll.total_votes())
+  for answer in poll.answers:
+    print(answer, await [x async for x in answer.voters()])
 
 with open('token') as f:
   token = f.read()
