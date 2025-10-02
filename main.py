@@ -293,52 +293,67 @@ with command_group(bot, 'file') as filegroup:
 
 with command_group(bot, 'statement') as statementgroup:
   @statementgroup.slash_command('add')
-  async def statement_add(ctx, line: int, content: str):
+  async def statement_add(ctx, line_num: int, content: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
       await ctx.respond('You are not focused on a file.')
       return
-    if line < 0:
-      line = 0
-    if line > len(file.lines):
-      line = len(file.lines)
-    file.lines.insert(line, Line.new(content))
+    if line_num < 0:
+      line_num = 0
+    if line_num > len(file.lines):
+      line_num = len(file.lines)
+    file.lines.insert(line_num, Line.new(content))
     file.save()
     await ctx.respond('Statement added.')
 
   @statementgroup.slash_command('edit')
-  async def statement_edit(ctx, line: int, new_content: str):
+  async def statement_edit(ctx, line_num: int, new_content: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
       await ctx.respond('You are not focused on a file.')
       return
-    if line < 1 or line > len(file.lines):
+    if line_num < 1 or line_num > len(file.lines):
       await ctx.respond('Invalid line number.')
       return
+    line = file.lines[line_num]
     poll = discord.Poll(
-      question = discord.PollMedia(f'Edit line `{line}` of `{file.name}` (currently `{file.lines[line].content}`) to `{new_content}`?'),
+      question = discord.PollMedia(f'Edit line `{line_num}` of `{file.name}` (currently `{line.content}`) to `{new_content}`?'),
       answers = [
-        discord.PollAnswer("Yes", "❤"),
-        discord.PollAnswer("No", "❤"),
+        discord.PollAnswer("Yes", "❤️"),
+        discord.PollAnswer("No", "💔"),
       ],
       duration = 1,
       allow_multiselect = False,
     )
-    await ctx.respond('You executed the slash command edit_statement!', poll = poll)
+    message = await ctx.respond('You executed the slash command edit_statement!', poll = poll)
+    line.add_edit_poll(message, ctx.author.id, new_content)
 
   @statementgroup.slash_command('delete')
-  async def statement_delete(ctx):
+  async def statement_delete(ctx, line_num: int):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
       await ctx.respond('You are not focused on a file.')
       return
-    await ctx.respond('You executed the slash command delete_statement!')
+    if line_num < 1 or line_num > len(file.lines):
+      await ctx.respond('Invalid line number.')
+    line = file.lines[line_num]
+    poll = discord.Poll(
+      question = discord.PollMedia(f'Delete line `{line_num}` of `{file.name}` (`{line.content}`)?'),
+      answers = [
+        discord.PollAnswer("Yes", "💔"),
+        discord.PollAnswer("No", "❤️"),
+      ],
+      duration = 1,
+      allow_multiselect = False,
+    )
+    message = await ctx.respond('You executed the slash command delete_statement!', poll = poll)
+    line.add_delete_poll(message, ctx.author.id)
 
 @bot.event
 async def on_ready() -> None:
