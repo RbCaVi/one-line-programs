@@ -193,29 +193,39 @@ class File:
     }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
 
 class Line:
-  def __init__(self, content, contributors):
+  def __init__(self, content, contributors, polls):
     self.content = content
     self.contributors = set(contributors)
+    self.polls = {mid: p for mid,*p in polls}
 
   @staticmethod
   def load(line_data):
     return Line(
       content = line_data['content'],
       contributors = line_data['contributors'],
+      polls = line_data['polls'],
     )
 
   @staticmethod
-  def new(content, author_id):
+  def new(content, user_id):
     return Line(
       content = content,
-      contributors = [author_id],
+      contributors = [user_id],
+      polls = [],
     )
 
   def dump(self):
     return {
       'content': self.content,
       'contributors': list(self.contributors),
+      'polls': [[mid, *p] for mid,p in self.polls.items()]
     }
+
+  def add_edit_poll(self, message_id, user_id, new_content):
+    self.polls[message_id] = ['edit', user_id, new_content]
+
+  def add_delete_poll(self, message_id, user_id):
+    self.polls[message_id] = ['delete', user_id]
 
 bot = discord.ext.commands.Bot()
 
@@ -334,7 +344,8 @@ with command_group(bot, 'statement') as statementgroup:
       allow_multiselect = False,
     )
     message = await ctx.respond('You executed the slash command edit_statement!', poll = poll)
-    line.add_edit_poll(message, ctx.author.id, new_content)
+    line.add_edit_poll(message.id, ctx.author.id, new_content)
+    file.save()
 
   @statementgroup.slash_command('delete')
   async def statement_delete(ctx, line_num: int):
@@ -357,7 +368,8 @@ with command_group(bot, 'statement') as statementgroup:
       allow_multiselect = False,
     )
     message = await ctx.respond('You executed the slash command delete_statement!', poll = poll)
-    line.add_delete_poll(message, ctx.author.id)
+    line.add_delete_poll(message.id, ctx.author.id)
+    file.save()
 
 @bot.event
 async def on_ready() -> None:
