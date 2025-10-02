@@ -298,7 +298,7 @@ with command_group(bot, 'statement') as statementgroup:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
-      await ctx.respond(f'You are not focused on a file.')
+      await ctx.respond('You are not focused on a file.')
       return
     if line < 0:
       line = 0
@@ -314,10 +314,10 @@ with command_group(bot, 'statement') as statementgroup:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
-      await ctx.respond(f'You are not focused on a file.')
+      await ctx.respond('You are not focused on a file.')
       return
     if line < 1 or line > len(file.lines):
-      await ctx.respond(f'Invalid line number.')
+      await ctx.respond('Invalid line number.')
       return
     poll = discord.Poll(
       question = discord.PollMedia(f'Edit line `{line}` of `{file.name}` (currently `{file.lines[line].content}`) to `{new_content}`?'),
@@ -336,7 +336,7 @@ with command_group(bot, 'statement') as statementgroup:
       await ctx.respond('There is no project in this channel.')
       return
     if (file := project.focused_files.get(ctx.author.id)) is None:
-      await ctx.respond(f'You are not focused on a file.')
+      await ctx.respond('You are not focused on a file.')
       return
     await ctx.respond('You executed the slash command delete_statement!')
 
