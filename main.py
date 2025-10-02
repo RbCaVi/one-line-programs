@@ -352,9 +352,9 @@ with command_group(bot, 'statement') as statementgroup:
     if line_num < 1 or line_num > len(file.lines):
       await ctx.respond('Invalid line number.')
       return
-    line = file.lines[line_num]
+    line = file.lines[line_num - 1]
     poll = discord.Poll(
-      question = discord.PollMedia(f'Edit line `{line_num}` of `{file.name}` (currently `{line.content}`) to `{new_content}`?'),
+      question = discord.PollMedia('Will you edit?'),
       answers = [
         discord.PollAnswer("Yes", "❤️"),
         discord.PollAnswer("No", "💔"),
@@ -362,7 +362,7 @@ with command_group(bot, 'statement') as statementgroup:
       duration = 1,
       allow_multiselect = False,
     )
-    message = await ctx.respond('You executed the slash command edit_statement!', poll = poll)
+    message = await (await ctx.respond(f'Edit line `{line_num}` of `{file.name}` (currently `{line.content}`) to `{new_content}`?', poll = poll)).original_response()
     line.add_edit_poll(message.id, ctx.author.id, new_content)
     file.save()
 
@@ -376,9 +376,9 @@ with command_group(bot, 'statement') as statementgroup:
       return
     if line_num < 1 or line_num > len(file.lines):
       await ctx.respond('Invalid line number.')
-    line = file.lines[line_num]
+    line = file.lines[line_num - 1]
     poll = discord.Poll(
-      question = discord.PollMedia(f'Delete line `{line_num}` of `{file.name}` (`{line.content}`)?'),
+      question = discord.PollMedia('Will you delete?'),
       answers = [
         discord.PollAnswer("Yes", "💔"),
         discord.PollAnswer("No", "❤️"),
@@ -386,7 +386,7 @@ with command_group(bot, 'statement') as statementgroup:
       duration = 1,
       allow_multiselect = False,
     )
-    message = await ctx.respond('You executed the slash command delete_statement!', poll = poll)
+    message = await (await ctx.respond(f'Delete line `{line_num}` of `{file.name}` (`{line.content}`)?', poll = poll)).original_response()
     line.add_delete_poll(message.id, ctx.author.id)
     file.save()
 
