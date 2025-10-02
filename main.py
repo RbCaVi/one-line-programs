@@ -239,7 +239,10 @@ with command_group(bot, 'file') as filegroup:
       return []
     return [name for name in project.files_by_name if name.lower().startswith(ctx.value.lower())]
 
-  @filegroup.slash_command('focus', options = [discord.Option(name = 'name', autocomplete = autocomplete_file)])
+  def file_option(name):
+    return discord.Option(name = name, autocomplete = autocomplete_file)
+
+  @filegroup.slash_command('focus', options = [file_option('name')])
   async def file_focus(ctx, name: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
