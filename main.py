@@ -146,7 +146,7 @@ class Project:
 
   def test_poll(self, poll_data, yes_voters, no_voters):
     file_name,file_poll_data = poll_data
-    return self.files[file_name].test_poll(file_poll_data, yes_voters, no_voters)
+    return self.files_by_name[file_name].test_poll(file_poll_data, yes_voters, no_voters)
 
   def apply_poll(self, poll_data):
     file_name,file_poll_data = poll_data
@@ -156,7 +156,7 @@ class Project:
       self.focused_files = {uid: f for uid,f in self.focused_files.items() if f.name != file_name}
       del self.files_by_name[file_name]
     else:
-      self.files_by_name[file_name].apply_poll(poll_data)
+      self.files_by_name[file_name].apply_poll(file_poll_data)
     self.save()
 
 def random_string():
@@ -241,7 +241,7 @@ class File:
       self.lines.pop(line_num)
       self.contributors.add(line_poll_data[1])
     else:
-      self.lines[line_num].apply_poll(poll_data)
+      self.lines[line_num].apply_poll(line_poll_data)
     self.save()
 
 class Line:
