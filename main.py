@@ -5,6 +5,7 @@ import json
 import os
 import random
 import string
+import io
 
 import config
 
@@ -370,10 +371,10 @@ with command_group(bot, 'file') as filegroup:
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
-    if name not in project.files_by_name:
+    if (file := project.files_by_name.get(name)) is None:
       await ctx.respond(f'`{name}` does not exist in this project.')
       return
-    await ctx.respond('You executed the slash command view_file!')
+    await ctx.respond(file = discord.File(io.BytesIO(bytes('\n'.join(l.content for l in file.lines), 'utf-8')), filename = name + '.txt'))
 
   @filegroup.slash_command('delete')
   async def file_delete(ctx):
