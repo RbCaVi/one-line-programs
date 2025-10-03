@@ -296,6 +296,7 @@ class Line:
 
   def apply_poll(self, poll_data):
     # assuming this is an edit poll (delete polls are handled by the File)
+    self.polls = {} # clear out other polls
     self.contributors.add(poll_data[1])
     self.file.contributors.add(poll_data[1])
     self.content = poll_data[2]
