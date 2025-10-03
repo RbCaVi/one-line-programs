@@ -144,6 +144,21 @@ class Project:
       if (poll := file.get_poll(poll_id)) is not None:
         return name, poll
 
+  def test_poll(self, poll_data, yes_voters, no_voters):
+    file_name,file_poll_data = poll_data
+    return self.files[file_name].test_poll(file_poll_data, yes_voters, no_voters)
+
+  def apply_poll(self, poll_data):
+    file_name,file_poll_data = poll_data
+    if file_poll_data[0] == 'delete':
+      # we're deleting a file
+      self.files.remove(self.files_by_name[file_name])
+      self.focused_files = {uid: f for uid,f in self.focused_files.items() if f.name != file_name}
+      del self.files_by_name[file_name]
+    else:
+      self.files_by_name[file_name].apply_poll(poll_data)
+    self.save()
+
 def random_string():
   return ''.join(random.choice(string.ascii_lowercase) for i in range(8))
 
@@ -211,6 +226,24 @@ class File:
       if (poll := line.get_poll(poll_id)) is not None:
         return i, poll
 
+  def test_poll(self, poll_data, yes_voters, no_voters):
+    if poll_data[0] == 'delete':
+      yes_votes = len([v for v in yes_voters if v in self.contributors])
+      return yes_votes == len(self.contributors)
+    else:
+      line_num,line_poll_data = poll_data
+      return self.lines[line_num].test_poll(line_poll_data, yes_voters, no_voters)
+
+  def apply_poll(self, poll_data):
+    line_num,line_poll_data = poll_data
+    if line_poll_data[0] == 'delete':
+      # we're deleting a line
+      self.lines.pop(line_num)
+      self.contributors.add(line_poll_data[1])
+    else:
+      self.lines[line_num].apply_poll(poll_data)
+    self.save()
+
 class Line:
   def __init__(self, file, content, contributors, polls):
     self.content = content
@@ -252,6 +285,19 @@ class Line:
   def get_poll(self, poll_id):
     if (poll := self.polls.get(poll_id)) is not None:
       return poll
+
+  def test_poll(self, poll_data, yes_voters, no_voters):
+    yes_votes = len([v for v in yes_voters if v in self.contributors])
+    if poll_data[0] == 'edit':
+      return yes_votes >= 0.8 * len(self.contributors)
+    elif poll_data[0] == 'delete':
+      return yes_votes == len(self.contributors)
+
+  def apply_poll(self, poll_data):
+    # assuming this is an edit poll (delete polls are handled by the File)
+    self.contributors.add(poll_data[1])
+    self.file.contributors.add(poll_data[1])
+    self.content = poll_data[2]
 
 bot = discord.ext.commands.Bot()
 
