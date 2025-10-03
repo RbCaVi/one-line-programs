@@ -246,6 +246,7 @@ class File:
 
 class Line:
   def __init__(self, file, content, contributors, polls):
+    self.file = file
     self.content = content
     self.contributors = set(contributors)
     self.polls = {mid: p for mid,*p in polls}
