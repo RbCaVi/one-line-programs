@@ -170,7 +170,7 @@ class File:
     self.project_id = project_id
     self.id = file_id
     self.name = name
-    self.lines = [Line.load(l) for l in lines]
+    self.lines = [Line.load(self, l) for l in lines]
 
   @staticmethod
   def load(project_id, file_id):
@@ -208,22 +208,24 @@ class File:
         return i, poll
 
 class Line:
-  def __init__(self, content, contributors, polls):
+  def __init__(self, file, content, contributors, polls):
     self.content = content
     self.contributors = set(contributors)
     self.polls = {mid: p for mid,*p in polls}
 
   @staticmethod
-  def load(line_data):
+  def load(file, line_data):
     return Line(
+      file = file,
       content = line_data['content'],
       contributors = line_data['contributors'],
       polls = line_data['polls'],
     )
 
   @staticmethod
-  def new(content, user_id):
+  def new(file, content, user_id):
     return Line(
+      file = file,
       content = content,
       contributors = [user_id],
       polls = [],
@@ -337,7 +339,7 @@ with command_group(bot, 'statement') as statementgroup:
       line_num = 0
     if line_num > len(file.lines):
       line_num = len(file.lines)
-    file.lines.insert(line_num, Line.new(content, ctx.author.id))
+    file.lines.insert(line_num, Line.new(file, content, ctx.author.id))
     file.save()
     await ctx.respond('Statement added.')
 
