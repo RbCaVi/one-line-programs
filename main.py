@@ -156,7 +156,6 @@ class Project:
     file_name,file_poll_data = poll_data
     if file_poll_data[0] == 'delete':
       # we're deleting a file
-      self.files.remove(self.files_by_name[file_name])
       self.focused_files = {uid: f for uid,f in self.focused_files.items() if f.name != file_name}
       del self.files_by_name[file_name]
     else:
@@ -185,12 +184,13 @@ def is_name_valid(name):
   ))
 
 class File:
-  def __init__(self, project_id, file_id, name, lines, contributors):
+  def __init__(self, project_id, file_id, name, lines, contributors, polls):
     self.project_id = project_id
     self.id = file_id
     self.name = name
     self.lines = [Line.load(self, l) for l in lines]
     self.contributors = set(contributors)
+    self.polls = {mid: p for mid,*p in polls}
 
   @staticmethod
   def load(project_id, file_id):
@@ -201,6 +201,7 @@ class File:
       name = file_data['name'],
       lines = file_data['lines'],
       contributors = file_data['contributors'],
+      polls = file_data['polls'],
     )
 
   @staticmethod
@@ -214,6 +215,7 @@ class File:
       name = name,
       lines = [],
       contributors = [user_id],
+      polls = [],
     )
     file.save()
     return file
@@ -223,12 +225,21 @@ class File:
       'name': self.name,
       'lines': [l.dump() for l in self.lines],
       'contributors': list(self.contributors),
+      'polls': [[mid, *p] for mid,p in self.polls.items()],
     }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
+
+  def delete(self):
+    os.remove(os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
+
+  def add_delete_poll(self, poll_id, user_id):
+    self.polls[poll_id] = ['delete', user_id]
 
   def get_poll(self, poll_id):
     for i,line in enumerate(self.lines):
       if (poll := line.get_poll(poll_id)) is not None:
         return i, poll
+    if (poll := self.polls.get(poll_id)) is not None:
+      return poll
 
   def test_poll(self, poll_data, yes_voters, no_voters):
     if poll_data[0] == 'delete':
@@ -278,7 +289,7 @@ class Line:
     return {
       'content': self.content,
       'contributors': list(self.contributors),
-      'polls': [[mid, *p] for mid,p in self.polls.items()]
+      'polls': [[mid, *p] for mid,p in self.polls.items()],
     }
 
   def add_edit_poll(self, poll_id, user_id, new_content):
@@ -376,12 +387,26 @@ with command_group(bot, 'file') as filegroup:
       return
     await ctx.respond(file = discord.File(io.BytesIO(bytes('\n'.join(l.content for l in file.lines), 'utf-8')), filename = name + '.txt'))
 
-  @filegroup.slash_command('delete')
-  async def file_delete(ctx):
+  @filegroup.slash_command('delete', options = [file_option('name')])
+  async def file_delete(ctx, name: str):
     if (project := projects.get(ctx.channel.id)) is None:
       await ctx.respond('There is no project in this channel.')
       return
-    await ctx.respond('You executed the slash command delete_file!')
+    if (file := project.files_by_name.get(name)) is None:
+      await ctx.respond(f'`{name}` does not exist in this project.')
+      return
+    poll = discord.Poll(
+      question = discord.PollMedia('Will you delete?'),
+      answers = [
+        discord.PollAnswer("Yes", "💔"),
+        discord.PollAnswer("No", "❤️"),
+      ],
+      duration = 1,
+      allow_multiselect = False,
+    )
+    message = await (await ctx.respond(f'Delete file `{file.name}`?', poll = poll)).original_response()
+    file.add_delete_poll(message.id, ctx.author.id)
+    file.save()
 
 with command_group(bot, 'statement') as statementgroup:
   @statementgroup.slash_command('add')
