@@ -97,7 +97,7 @@ class Project:
       try:
         self.files.append(File.load(self.id, file_id))
       except Exception as e:
-        print(f'Could not load file at {project_name} :: {file_id}.')
+        print(f'Could not load file at {name} :: {file_id}.')
         print(f'Error: {repr(e)}')
     self.files_by_name = {f.name: f for f in self.files}
     self.focused_files = {uid: self.files_by_name[name] for uid,name in focused_files}
