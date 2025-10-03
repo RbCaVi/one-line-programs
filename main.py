@@ -38,6 +38,9 @@ def json_dump(data, file_name):
   with open(file_name, 'w') as f:
     json.dump(data, f, indent = 2)
 
+def choose(f, l):
+  return next(filter(f, l))
+
 class Projects:
   def __init__(self):
     self.projects = []
@@ -454,13 +457,14 @@ async def on_ready() -> None:
 
 @bot.event
 async def on_raw_poll_vote_add(payload) -> None:
-  print(payload)
   poll = (await bot.get_channel(payload.channel_id).fetch_message(payload.message_id)).poll
-  print(poll.total_votes())
-  for answer in poll.answers:
-    print(answer, [x async for x in answer.voters()])
-  project_name,(file_name,(line_num,poll_data)) = projects.get_poll(payload.message_id)
-  print(projects.get_poll(payload.message_id))
+  if (project_name_poll_data := projects.get_poll(payload.message_id)) is None:
+    return
+  project_name,poll_data = project_name_poll_data
+  yes_voters = [u.id async for u in choose(lambda a: a.text == 'Yes', poll.answers).voters()]
+  no_voters = [u.id async for u in choose(lambda a: a.text == 'No', poll.answers).voters()]
+  if projects[project_name].test_poll(poll_data, yes_voters, no_voters):
+    projects[project_name].apply_poll(poll_data)
 
 with open('token') as f:
   token = f.read()
