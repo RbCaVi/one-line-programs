@@ -166,11 +166,12 @@ def is_name_valid(name):
   ))
 
 class File:
-  def __init__(self, project_id, file_id, name, lines):
+  def __init__(self, project_id, file_id, name, lines, contributors):
     self.project_id = project_id
     self.id = file_id
     self.name = name
     self.lines = [Line.load(self, l) for l in lines]
+    self.contributors = set(contributors)
 
   @staticmethod
   def load(project_id, file_id):
@@ -180,10 +181,11 @@ class File:
       file_id = file_id,
       name = file_data['name'],
       lines = file_data['lines'],
+      contributors = file_data['contributors'],
     )
 
   @staticmethod
-  def new(project_id, name):
+  def new(project_id, name, user_id):
     # create an empty file
     while os.path.exists(os.path.join(config.projects_data, project_id, config.project_files, file_id := get_file_id(name))): # this is the best way to write this
       pass
@@ -192,6 +194,7 @@ class File:
       file_id = file_id,
       name = name,
       lines = [],
+      contributors = [user_id],
     )
     file.save()
     return file
@@ -200,6 +203,7 @@ class File:
     json_dump({
       'name': self.name,
       'lines': [l.dump() for l in self.lines],
+      'contributors': list(self.contributors),
     }, os.path.join(config.projects_data, self.project_id, config.project_files, self.id))
 
   def get_poll(self, poll_id):
@@ -224,6 +228,7 @@ class Line:
 
   @staticmethod
   def new(file, content, user_id):
+    file.contributors.add(user_id)
     return Line(
       file = file,
       content = content,
