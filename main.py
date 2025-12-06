@@ -156,6 +156,9 @@ class Project:
     file_name,file_poll_data = poll_data
     if file_poll_data[0] == 'delete':
       # we're deleting a file
+      file = self.files_by_name[file_name]
+      file.delete()
+      self.files.remove(file)
       self.focused_files = {uid: f for uid,f in self.focused_files.items() if f.name != file_name}
       del self.files_by_name[file_name]
     else:
